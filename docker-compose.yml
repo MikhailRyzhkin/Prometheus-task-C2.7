@@ -1,0 +1,190 @@
+version: '3.9'
+
+services:
+
+# Разворачиваем контейнер Prometheus - БД временных рядов и интерфейс для выполнения PromQL запросов (порт 9090)
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus/
+    container_name: prometheus
+    hostname: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
+    depends_on:
+    - cadvisor
+
+# Разворачиваем контейнер cadvisor - для мониторинга контейнеров (порт 6379)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+    - 8080:8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default    
+    depends_on:
+    - redis
+    
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+    - 6379:6379
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
+
+# Разворачиваем контейнер Node-exporter - для сбора метрик с хоста (порт 9100)
+  node-exporter:
+    image: prom/node-exporter:latest
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    container_name: exporter
+    hostname: exporter
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    ports:
+      - 9100:9100
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
+
+# Разворачиваем контейнер blackbox - для мониторинга сетевых сервисов по различным протоколам, в т.ч. http на доступность (порт 9115)
+  blackbox:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox
+    hostname: blackbox
+    ports:
+      - 9115:9115
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/blackbox/blackbox.yml"
+    volumes:
+      - ./blackbox:/etc/blackbox
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
+
+# Разворачиваем контейнер alertmanager - для отправки уведомлений в мессенджеры/почту (порт 9093)
+  alertmanager:
+    image: prom/alertmanager:latest
+    user: root
+    ports:
+      - 9093:9093
+    volumes:
+      - ./alertmanager/:/etc/alertmanager/
+    container_name: alertmanager
+    hostname: alertmanager
+    environment:
+      TZ: "Europe/Moscow"
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/etc/alertmanager/data'
+    networks:
+      - default
+
+# Разворачиваем контейнер alertmanager-bot, который будет отправлять оповещения в telegramm группу. Только внемсём свои данные по админке и токену
+#  alertmanager-bot:
+#    command:
+#      - --alertmanager.url=http://alertmanager:9093
+#      - --log.level=info
+#      - --store=bolt
+#      - --bolt.path=/data/bot.db
+#      - --telegram.admin=573454381
+#      - --telegram.token=5472129845:AAFTQRdujqIHgWHbbVtfYWQQvzvIN98KBqg
+#    image: metalmatze/alertmanager-bot:latest
+#    user: root
+#    ports:
+#      - 8080:8080
+#    container_name: alertmanager-bot
+#    hostname: alertmanager-bot
+#    environment:
+#      TZ: "Europe/Moscow"
+#    restart: unless-stopped
+#    volumes:
+#      - ./data:/data
+#    networks:
+#      - default
+
+# Разворачиваем контейнер loki и promtail - для логирования (порты 3100 и 9080)
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/:/etc/loki/
+    command: -config.file=/etc/loki/loki-local-config.yaml
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
+    depends_on:
+      - promtail
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - /var/log:/var/log
+      - ./promtail/:/etc/promtail/
+    command: -config.file=/etc/promtail/promtail-docker-config.yaml
+    deploy:
+      placement:
+        constraints:
+          - node.role==manager
+      restart_policy:
+        condition: on-failure
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
+
+# Разворачиваем контейнер Grafana - для визуализации графиков (порт 3000)
+  grafana:
+    image: grafana/grafana:latest
+    user: root
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    container_name: grafana
+    hostname: grafana
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
+    depends_on:
+      - prometheus
+      - loki
+
+networks:
+  default:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
