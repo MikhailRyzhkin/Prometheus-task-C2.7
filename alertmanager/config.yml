@@ -1,0 +1,9 @@
+# Отправлка оповещений с помощью webhook на сервис alertmanager-bot:8080 (наш телеграм бот для alertmanager).
+route:
+    receiver: 'alertmanager-bot'
+
+receivers:
+- name: 'alertmanager-bot'
+  webhook_configs:
+  - send_resolved: true
+    url: 'http://alertmanager-bot:8080'

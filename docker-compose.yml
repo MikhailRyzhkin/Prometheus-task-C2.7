@@ -107,7 +107,7 @@ services:
     networks:
       - default
 
-# Разворачиваем контейнер alertmanager-bot, который будет отправлять оповещения в telegramm группу. Только внемсём свои данные по админке и токену
+# Разворачиваем контейнер alertmanager-bot (порт 8080), который будет отправлять оповещения в telegramm группу. Только внесём свои данные по админке и токену.
 #  alertmanager-bot:
 #    command:
 #      - --alertmanager.url=http://alertmanager:9093
