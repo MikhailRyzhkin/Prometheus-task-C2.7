@@ -32,11 +32,11 @@ groups:
       description: "HTTP status code is not 200-399\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
 # Правило, которое будет срабатывать в случае превышения node_load1 значения 0.8 на протяжении 30 секунд.
-  — alert: high_load
-    expr: node_load1 > 0.8
-    for: 30s
-    labels:
-      severity: warning      
-    annotations:
-      summary: "Instance {{ $labels.instance }} under high load"
-      description: "{{ $labels.instance }} of job {{ $labels.job }} is under high load."
+#  — alert: high_load
+#    expr: node_load1 > 0.8
+#    for: 30s
+#    labels:
+#      severity: warning      
+#    annotations:
+#      summary: "Instance {{ $labels.instance }} under high load"
+#      description: "{{ $labels.instance }} of job {{ $labels.job }} is under high load."

@@ -91,13 +91,13 @@ services:
 # Разворачиваем контейнер alertmanager - для отправки уведомлений в мессенджеры/почту (порт 9093)
   alertmanager:
     image: prom/alertmanager:latest
+    container_name: alertmanager
+    hostname: alertmanager
     user: root
     ports:
       - 9093:9093
     volumes:
       - ./alertmanager/:/etc/alertmanager/
-    container_name: alertmanager
-    hostname: alertmanager
     environment:
       TZ: "Europe/Moscow"
     restart: unless-stopped
@@ -131,48 +131,52 @@ services:
 #      - default
 
 # Разворачиваем контейнер loki и promtail - для логирования (порты 3100 и 9080)
-  loki:
-    image: grafana/loki:latest
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./loki/:/etc/loki/
-    command: -config.file=/etc/loki/loki-local-config.yaml
-    environment:
-      TZ: "Europe/Moscow"
-    networks:
-      - default
-    depends_on:
-      - promtail
+#  loki:
+#    image: grafana/loki:latest
+#    container_name: loki
+#    hostname: loki
+#    ports:
+#      - "3100:3100"
+#    volumes:
+#      - ./loki/:/etc/loki/
+#    command: -config.file=/etc/loki/loki-local-config.yaml
+#    environment:
+#      TZ: "Europe/Moscow"
+#    networks:
+#      - default
+#    depends_on:
+#      - promtail
 
-  promtail:
-    image: grafana/promtail:latest
-    volumes:
-      - /var/log:/var/log
-      - ./promtail/:/etc/promtail/
-    command: -config.file=/etc/promtail/promtail-docker-config.yaml
-    deploy:
-      placement:
-        constraints:
-          - node.role==manager
-      restart_policy:
-        condition: on-failure
-    environment:
-      TZ: "Europe/Moscow"
-    networks:
-      - default
+#  promtail:
+#    image: grafana/promtail:latest
+#    container_name: promtail
+#    hostname: promtail
+#    volumes:
+#      - /var/log:/var/log
+#      - ./promtail/:/etc/promtail/
+#    command: -config.file=/etc/promtail/promtail-docker-config.yaml
+#    deploy:
+#      placement:
+#        constraints:
+#          - node.role==manager
+#      restart_policy:
+#        condition: on-failure
+#    environment:
+#      TZ: "Europe/Moscow"
+#    networks:
+#      - default
 
 # Разворачиваем контейнер Grafana - для визуализации графиков (порт 3000)
   grafana:
     image: grafana/grafana:latest
+    container_name: grafana
+    hostname: grafana
     user: root
     ports:
       - 3000:3000
     volumes:
       - ./grafana:/var/lib/grafana
       - ./grafana/provisioning/:/etc/grafana/provisioning/
-    container_name: grafana
-    hostname: grafana
     restart: unless-stopped
     environment:
       TZ: "Europe/Moscow"
