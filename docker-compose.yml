@@ -184,7 +184,7 @@ services:
       - default
     depends_on:
       - prometheus
-      - loki
+#      - loki
 
 networks:
   default:
