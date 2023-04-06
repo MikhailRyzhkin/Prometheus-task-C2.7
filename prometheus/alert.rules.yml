@@ -11,6 +11,16 @@ groups:
       summary: "Prometheus target missing (instance {{ $labels.instance }})"
       description: "A Prometheus target has disappeared. An exporter might be crashed. VALUE = {{ $value }}  LABELS: {{ $labels }}"
 
+# Правило, которое будет срабатывать при перезагрузке узла (node-exporter)
+  - alert: ServerReboot
+    expr: node_boot_time_seconds == 0
+    for: 1m
+    labels:
+      severity: hight
+    annotations:
+      summary: Prometheus target ServerReboot - server reboot (instance {{ $labels.instance }})
+      description: "ServerReboot took more than 1m to complete. VALUE = {{ $value }} LABELS = {{ $labels }}"
+
 # BlackboxSlowProbe — предупреждать, если сайт открывается дольше 5 секунд
   - alert: BlackboxSlowProbe
     expr: avg_over_time(probe_duration_seconds[1m]) > 5
